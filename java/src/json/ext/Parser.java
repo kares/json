@@ -10,12 +10,10 @@ package json.ext;
 import org.jruby.Ruby;
 import org.jruby.RubyArray;
 import org.jruby.RubyClass;
-import org.jruby.RubyEncoding;
 import org.jruby.RubyFloat;
 import org.jruby.RubyHash;
 import org.jruby.RubyInteger;
 import org.jruby.RubyModule;
-import org.jruby.RubyNumeric;
 import org.jruby.RubyObject;
 import org.jruby.RubyString;
 import org.jruby.anno.JRubyMethod;
@@ -49,7 +47,7 @@ import static org.jruby.util.ConvertDouble.DoubleConverter;
  */
 public class Parser extends RubyObject {
     private final RuntimeInfo info;
-    private RubyString vSource;
+    private RubyString source;
     private RubyString createId;
     private boolean createAdditions;
     private int maxNesting;
@@ -154,8 +152,8 @@ public class Parser extends RubyObject {
 
     @JRubyMethod(required = 1, optional = 1, visibility = Visibility.PRIVATE)
     public IRubyObject initialize(ThreadContext context, IRubyObject[] args) {
-        Ruby runtime = context.getRuntime();
-        if (this.vSource != null) {
+        Ruby runtime = context.runtime;
+        if (this.source != null) {
             throw runtime.newTypeError("already initialized instance");
          }
 
@@ -176,8 +174,8 @@ public class Parser extends RubyObject {
             " used in conjunction"
           );
         }
-        this.vSource = args[0].convertToString();
-        this.vSource = convertEncoding(context, vSource);
+        this.source = args[0].convertToString();
+        this.source = convertEncoding(context, source);
 
         return this;
     }
@@ -198,21 +196,6 @@ public class Parser extends RubyObject {
     }
 
     /**
-     * Checks the first four bytes of the given ByteList to infer its encoding,
-     * using the principle demonstrated on section 3 of RFC 4627 (JSON).
-     */
-    private static String sniffByteList(ByteList bl) {
-        if (bl.length() < 4) return null;
-        if (bl.get(0) == 0 && bl.get(2) == 0) {
-            return bl.get(1) == 0 ? "utf-32be" : "utf-16be";
-        }
-        if (bl.get(1) == 0 && bl.get(3) == 0) {
-            return bl.get(2) == 0 ? "utf-32le" : "utf-16le";
-        }
-        return null;
-    }
-
-    /**
      * <code>Parser#parse()</code>
      *
      * <p>Parses the current JSON text <code>source</code> and returns the
@@ -220,7 +203,7 @@ public class Parser extends RubyObject {
      */
     @JRubyMethod
     public IRubyObject parse(ThreadContext context) {
-        return new ParserSession(this, context, info).parse();
+        return new ParserSession(context, this).parse();
     }
 
     /**
@@ -230,16 +213,13 @@ public class Parser extends RubyObject {
      * used to construct this Parser.
      */
     @JRubyMethod(name = "source")
-    public IRubyObject source_get() {
+    public IRubyObject source() {
         return checkAndGetSource().dup();
     }
 
     public RubyString checkAndGetSource() {
-      if (vSource != null) {
-        return vSource;
-      } else {
+        if (source != null) return source;
         throw getRuntime().newTypeError("uninitialized instance");
-      }
     }
 
     /**
@@ -265,7 +245,6 @@ public class Parser extends RubyObject {
     private static class ParserSession {
         private final Parser parser;
         private final ThreadContext context;
-        private final RuntimeInfo info;
         private final ByteList byteList;
         private final ByteList view;
         private final byte[] data;
@@ -277,10 +256,9 @@ public class Parser extends RubyObject {
         // no idea about the origins of this value, ask Flori ;)
         private static final int EVIL = 0x666;
 
-        private ParserSession(Parser parser, ThreadContext context, RuntimeInfo info) {
-            this.parser = parser;
+        private ParserSession(ThreadContext context, Parser parser) {
             this.context = context;
-            this.info = info;
+            this.parser = parser;
             this.byteList = parser.checkAndGetSource().getByteList();
             this.data = byteList.unsafeBytes();
             this.view = new ByteList(data, false);
