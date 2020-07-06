@@ -28,6 +28,9 @@ import org.jruby.runtime.Visibility;
 import org.jruby.runtime.builtin.IRubyObject;
 import org.jruby.util.ByteList;
 import org.jruby.util.ConvertBytes;
+
+import static json.ext.Generator.UTF8;
+import static json.ext.Generator.ASCII;
 import static org.jruby.util.ConvertDouble.DoubleConverter;
 
 /**
@@ -184,17 +187,14 @@ public class Parser extends RubyObject {
      * a converted copy is returned.
      * Returns the source string if no conversion is needed.
      */
-    private RubyString convertEncoding(ThreadContext context, RubyString source) {
-      RubyEncoding encoding = (RubyEncoding)source.encoding(context);
-      if (encoding == info.ascii8bit.get()) {
-          if (source.isFrozen()) {
-            source = (RubyString) source.dup();
-          }
-          source.force_encoding(context, info.utf8.get());
-      } else {
-        source = (RubyString) source.encode(context, info.utf8.get());
-      }
-      return source;
+    private static RubyString convertEncoding(ThreadContext context, RubyString source) {
+        if (source.getEncoding() == UTF8) return source;
+        if (source.getEncoding() == ASCII) {
+            if (source.isFrozen()) source = (RubyString) source.dup();
+            source.associateEncoding(UTF8);
+            return source;
+        }
+        return (RubyString) source.encode(context, context.runtime.getEncodingService().getEncoding(UTF8));
     }
 
     /**
@@ -210,19 +210,6 @@ public class Parser extends RubyObject {
             return bl.get(2) == 0 ? "utf-32le" : "utf-16le";
         }
         return null;
-    }
-
-    /**
-     * Assumes the given (binary) RubyString to be in the given encoding, then
-     * converts it to UTF-8.
-     */
-    private RubyString reinterpretEncoding(ThreadContext context,
-            RubyString str, String sniffedEncoding) {
-        RubyEncoding actualEncoding = info.getEncoding(context, sniffedEncoding);
-        RubyEncoding targetEncoding = info.utf8.get();
-        RubyString dup = (RubyString)str.dup();
-        dup.force_encoding(context, actualEncoding);
-        return (RubyString)dup.encode_bang(context, targetEncoding);
     }
 
     /**
@@ -1460,7 +1447,7 @@ case 5:
 
             if (cs >= JSON_string_first_final && result != null) {
                 if (result instanceof RubyString) {
-                  ((RubyString)result).force_encoding(context, info.utf8.get());
+                    ((RubyString) result).associateEncoding(UTF8);
                 }
                 res.update(result, p + 1);
             } else {
@@ -2062,9 +2049,8 @@ case 5:
 
                 if (!vKlassName.isNil()) {
                     // might throw ArgumentError, we let it propagate
-                    IRubyObject klass = parser.info.jsonModule.get().
-                            callMethod(context, "deep_const_get", vKlassName);
-                    if (klass.respondsTo("json_creatable?") &&
+                    RubyModule klass = getRuntime().getClassFromPath(vKlassName.convertToString().decodeString());
+                    if (klass instanceof RubyClass &&
                         klass.callMethod(context, "json_creatable?").isTrue()) {
 
                         returnedResult = klass.callMethod(context, "json_create", result);

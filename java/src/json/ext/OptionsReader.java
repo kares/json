@@ -14,6 +14,8 @@ import org.jruby.runtime.ThreadContext;
 import org.jruby.runtime.builtin.IRubyObject;
 import org.jruby.util.ByteList;
 
+import static json.ext.Generator.UTF8;
+
 final class OptionsReader {
     private final ThreadContext context;
     private final Ruby runtime;
@@ -81,13 +83,7 @@ final class OptionsReader {
     RubyString getString(String key, RubyString defaultValue) {
         IRubyObject value = get(key);
         if (value == null || !value.isTrue()) return defaultValue;
-
-        RubyString str = value.convertToString();
-        RuntimeInfo info = getRuntimeInfo();
-        if (str.encoding(context) != info.utf8.get()) {
-            str = (RubyString)str.encode(context, info.utf8.get());
-        }
-        return str;
+        return Utils.encodeUTF8(runtime, value);
     }
 
     /**

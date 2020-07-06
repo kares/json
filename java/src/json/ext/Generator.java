@@ -5,12 +5,16 @@
  */
 package json.ext;
 
+import org.jcodings.Encoding;
+import org.jcodings.specific.ASCIIEncoding;
+import org.jcodings.specific.UTF8Encoding;
 import org.jruby.Ruby;
 import org.jruby.RubyArray;
 import org.jruby.RubyBasicObject;
 import org.jruby.RubyBignum;
 import org.jruby.RubyBoolean;
 import org.jruby.RubyClass;
+import org.jruby.RubyEncoding;
 import org.jruby.RubyFixnum;
 import org.jruby.RubyFloat;
 import org.jruby.RubyHash;
@@ -20,6 +24,10 @@ import org.jruby.runtime.builtin.IRubyObject;
 import org.jruby.util.ByteList;
 
 public final class Generator {
+
+    static final Encoding UTF8 = UTF8Encoding.INSTANCE;
+    static final Encoding ASCII = ASCIIEncoding.INSTANCE;
+
     private Generator() {
         throw new RuntimeException();
     }
@@ -98,7 +106,7 @@ public final class Generator {
      * won't be part of the session.
      */
     static class Session {
-        private final ThreadContext context;
+        final ThreadContext context;
         private GeneratorState state;
         private IRubyObject possibleState;
         private RuntimeInfo info;
@@ -123,7 +131,7 @@ public final class Generator {
         }
 
         public Ruby getRuntime() {
-            return context.getRuntime();
+            return context.runtime;
         }
 
         public GeneratorState getState() {
@@ -171,9 +179,7 @@ public final class Generator {
             ByteList buffer = new ByteList(guessSize(session, object));
             generate(session, object, buffer);
             result = RubyString.newString(session.getRuntime(), buffer);
-            ThreadContext context = session.getContext();
-            RuntimeInfo info = session.getInfo();
-            result.force_encoding(context, info.utf8.get());
+            result.associateEncoding(UTF8);
             return result;
         }
 
@@ -289,8 +295,7 @@ public final class Generator {
                         buffer.append(delim);
                     }
                     buffer.append(shift);
-                    Handler<IRubyObject> handler = getHandlerFor(runtime, element);
-                    handler.generate(session, element, buffer);
+                    getHandlerFor(runtime, element).generate(session, element, buffer);
                 }
 
                 state.decreaseDepth();
@@ -351,8 +356,7 @@ public final class Generator {
                         buffer.append((byte)':');
                         buffer.append(space);
 
-                        Handler<IRubyObject> valueHandler = getHandlerFor(runtime, value);
-                        valueHandler.generate(session, value, buffer);
+                        getHandlerFor(runtime, value).generate(session, value, buffer);
                         session.infectBy(value);
                     }
                 });
@@ -377,12 +381,11 @@ public final class Generator {
 
             @Override
             void generate(Session session, RubyString object, ByteList buffer) {
-                RuntimeInfo info = session.getInfo();
                 RubyString src;
-
-                if (object.encoding(session.getContext()) != info.utf8.get()) {
-                    src = (RubyString)object.encode(session.getContext(),
-                                                    info.utf8.get());
+                if (!object.getEncoding().isUTF8()) {
+                    ThreadContext context = session.getContext();
+                    RubyEncoding enc = context.runtime.getEncodingService().getEncoding(UTF8);
+                    src = (RubyString) object.encode(context, enc);
                 } else {
                     src = object;
                 }

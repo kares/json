@@ -17,6 +17,8 @@ import org.jruby.runtime.ThreadContext;
 import org.jruby.runtime.builtin.IRubyObject;
 import org.jruby.util.ByteList;
 
+import static json.ext.Generator.UTF8;
+
 /**
  * Library of miscellaneous utility functions
  */
@@ -85,4 +87,13 @@ final class Utils {
         }
         return result;
     }
+
+    static RubyString encodeUTF8(Ruby runtime, IRubyObject value) {
+        RubyString str = value.convertToString();
+        if (str.getEncoding() != UTF8) {
+            str = (RubyString) str.encode(runtime.getCurrentContext(), runtime.getEncodingService().getEncoding(UTF8));
+        }
+        return str;
+    }
+
 }

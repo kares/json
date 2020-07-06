@@ -21,6 +21,8 @@ import org.jruby.runtime.Visibility;
 import org.jruby.runtime.builtin.IRubyObject;
 import org.jruby.util.ByteList;
 
+import static json.ext.Generator.UTF8;
+
 /**
  * The <code>JSON::Ext::Generator::State</code> class.
  *
@@ -206,8 +208,7 @@ public class GeneratorState extends RubyObject {
     @JRubyMethod
     public IRubyObject generate(ThreadContext context, IRubyObject obj) {
         RubyString result = Generator.generateJson(context, obj, this);
-        RuntimeInfo info = RuntimeInfo.forRuntime(context.getRuntime());
-        result.force_encoding(context, info.utf8.get());
+        result.associateEncoding(UTF8);
         return result;
     }
 
@@ -227,7 +228,7 @@ public class GeneratorState extends RubyObject {
         if (getMetaClass().isMethodBound(name, true)) {
             return send(context, vName, Block.NULL_BLOCK);
         } else {
-            IRubyObject value = getInstanceVariables().getInstanceVariable("@" + name);
+            IRubyObject value = getInstanceVariable('@' + name);
             return value == null ? context.nil : value;
         }
     }
@@ -235,13 +236,13 @@ public class GeneratorState extends RubyObject {
     @JRubyMethod(name="[]=", required=2)
     public IRubyObject op_aset(ThreadContext context, IRubyObject vName, IRubyObject value) {
         String name = vName.asJavaString();
-        String nameWriter = name + "=";
+        String nameWriter = name + '=';
         if (getMetaClass().isMethodBound(nameWriter, true)) {
             return send(context, context.getRuntime().newString(nameWriter), value, Block.NULL_BLOCK);
         } else {
-            getInstanceVariables().setInstanceVariable("@" + name, value);
+            setInstanceVariable('@' + name, value);
         }
-        return context.getRuntime().getNil();
+        return context.nil;
     }
 
     public ByteList getIndent() {
@@ -296,12 +297,11 @@ public class GeneratorState extends RubyObject {
 
     @JRubyMethod(name="object_nl")
     public RubyString object_nl_get(ThreadContext context) {
-        return context.getRuntime().newString(objectNl);
+        return context.runtime.newString(objectNl);
     }
 
     @JRubyMethod(name="object_nl=")
-    public IRubyObject object_nl_set(ThreadContext context,
-                                     IRubyObject objectNl) {
+    public IRubyObject object_nl_set(ThreadContext context, IRubyObject objectNl) {
         this.objectNl = prepareByteList(context, objectNl);
         return objectNl;
     }
@@ -312,7 +312,7 @@ public class GeneratorState extends RubyObject {
 
     @JRubyMethod(name="array_nl")
     public RubyString array_nl_get(ThreadContext context) {
-        return context.getRuntime().newString(arrayNl);
+        return context.runtime.newString(arrayNl);
     }
 
     @JRubyMethod(name="array_nl=")
@@ -390,12 +390,8 @@ public class GeneratorState extends RubyObject {
         return vDepth;
     }
 
-    private ByteList prepareByteList(ThreadContext context, IRubyObject value) {
-        RubyString str = value.convertToString();
-        RuntimeInfo info = RuntimeInfo.forRuntime(context.getRuntime());
-        if (str.encoding(context) != info.utf8.get()) {
-            str = (RubyString)str.encode(context, info.utf8.get());
-        }
+    private static ByteList prepareByteList(ThreadContext context, IRubyObject value) {
+        RubyString str = Utils.encodeUTF8(context.runtime, value);
         return str.getByteList().dup();
     }
 
@@ -445,7 +441,7 @@ public class GeneratorState extends RubyObject {
      */
     @JRubyMethod(alias = "to_hash")
     public RubyHash to_h(ThreadContext context) {
-        Ruby runtime = context.getRuntime();
+        Ruby runtime = context.runtime;
         RubyHash result = RubyHash.newHash(runtime);
 
         result.op_aset(context, runtime.newSymbol("indent"), indent_get(context));
@@ -476,8 +472,6 @@ public class GeneratorState extends RubyObject {
 
     /**
      * Checks if the current depth is allowed as per this state's options.
-     * @param context
-     * @param depth The corrent depth
      */
     private void checkMaxNesting() {
         if (maxNesting != 0 && depth > maxNesting) {
