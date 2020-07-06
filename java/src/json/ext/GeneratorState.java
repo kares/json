@@ -112,38 +112,37 @@ public class GeneratorState extends RubyObject {
      * configured by <codes>opts</code>, something else to create an
      * unconfigured instance. If <code>opts</code> is a <code>State</code>
      * object, it is just returned.
-     * @param clazzParam The receiver of the method call
-     *                   ({@link RubyClass} <code>State</code>)
+     *
+     * @param klass The receiver of the method call ({@link RubyClass} <code>State</code>)
      * @param opts The object to use as a base for the new <code>State</code>
-     * @param block The block passed to the method
      * @return A <code>GeneratorState</code> as determined above
      */
     @JRubyMethod(meta=true)
-    public static IRubyObject from_state(ThreadContext context,
-            IRubyObject klass, IRubyObject opts) {
-        return fromState(context, opts);
+    public static IRubyObject from_state(ThreadContext context, IRubyObject klass, IRubyObject opts) {
+        return fromState(context, (RubyClass) klass, opts);
     }
 
-    static GeneratorState fromState(ThreadContext context, IRubyObject opts) {
-        return fromState(context, RuntimeInfo.forRuntime(context.getRuntime()), opts);
-    }
-
-    static GeneratorState fromState(ThreadContext context, RuntimeInfo info,
-                                    IRubyObject opts) {
-        RubyClass klass = info.generatorStateClass.get();
-        if (opts != null) {
+    static GeneratorState fromState(ThreadContext context, RubyClass klass, IRubyObject opts) {
+        if (opts != null && opts != context.nil) {
             // if the given parameter is a Generator::State, return itself
-            if (klass.isInstance(opts)) return (GeneratorState)opts;
+            if (klass.isInstance(opts)) return (GeneratorState) opts;
 
             // if the given parameter is a Hash, pass it to the instantiator
-            if (context.getRuntime().getHash().isInstance(opts)) {
-                return (GeneratorState)klass.newInstance(context,
-                        new IRubyObject[] {opts}, Block.NULL_BLOCK);
+            if (opts instanceof RubyHash) {
+                return (GeneratorState) klass.newInstance(context, opts, Block.NULL_BLOCK);
             }
         }
+        // for other values, return the JSON::SAFE_STATE_PROTOTYPE
+        return (GeneratorState) getSafeStatePrototype(context).dup();
+    }
 
-        // for other values, return the safe prototype
-        return (GeneratorState)info.getSafeStatePrototype(context).dup();
+    private static GeneratorState getSafeStatePrototype(ThreadContext context) {
+        final Ruby runtime = context.runtime;
+        IRubyObject value = runtime.getModule("JSON").getConstant("SAFE_STATE_PROTOTYPE");
+        if (!(value instanceof GeneratorState)) {
+            throw runtime.newTypeError(value, runtime.getClassFromPath("JSON::Ext::Generator::State"));
+        }
+        return (GeneratorState) value;
     }
 
     /**

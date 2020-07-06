@@ -10,6 +10,7 @@ import org.jruby.RubyArray;
 import org.jruby.RubyBasicObject;
 import org.jruby.RubyBignum;
 import org.jruby.RubyBoolean;
+import org.jruby.RubyClass;
 import org.jruby.RubyFixnum;
 import org.jruby.RubyFloat;
 import org.jruby.RubyHash;
@@ -127,14 +128,10 @@ public final class Generator {
 
         public GeneratorState getState() {
             if (state == null) {
-                state = GeneratorState.fromState(context, getInfo(), possibleState);
+                RubyClass klass = (RubyClass) getRuntime().getClassFromPath("JSON::Ext::Generator::State");
+                state = GeneratorState.fromState(context, klass, possibleState);
             }
             return state;
-        }
-
-        public RuntimeInfo getInfo() {
-            if (info == null) info = RuntimeInfo.forRuntime(getRuntime());
-            return info;
         }
 
         public StringEncoder getStringEncoder() {
