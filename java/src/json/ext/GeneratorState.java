@@ -405,7 +405,7 @@ public class GeneratorState extends RubyObject {
      */
   @JRubyMethod(alias = "merge")
     public IRubyObject configure(ThreadContext context, IRubyObject vOpts) {
-        OptionsReader opts = new OptionsReader(context, vOpts);
+        OptionsReader opts = new OptionsReader(context.runtime, vOpts);
 
         ByteList indent = opts.getString("indent");
         if (indent != null) this.indent = indent;

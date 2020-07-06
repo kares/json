@@ -5,8 +5,8 @@
  */
 package json.ext;
 
+import org.jruby.Ruby;
 import org.jruby.exceptions.RaiseException;
-import org.jruby.runtime.ThreadContext;
 import org.jruby.util.ByteList;
 
 /**
@@ -37,8 +37,8 @@ final class StringEncoder extends ByteListTranscoder {
             new byte[] {'0', '1', '2', '3', '4', '5', '6', '7',
                         '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'};
 
-    StringEncoder(ThreadContext context, boolean asciiOnly) {
-        super(context);
+    StringEncoder(Ruby runtime, boolean asciiOnly) {
+        super(runtime);
         this.asciiOnly = asciiOnly;
     }
 
@@ -105,7 +105,7 @@ final class StringEncoder extends ByteListTranscoder {
 
     @Override
     protected RaiseException invalidUtf8() {
-         return Utils.newException(context, Utils.M_GENERATOR_ERROR,
+         return Utils.newException(runtime.getCurrentContext(), Utils.M_GENERATOR_ERROR,
                  "source sequence is illegal/malformed utf-8");
     }
 }

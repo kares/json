@@ -144,7 +144,7 @@ public final class Generator {
 
         public StringEncoder getStringEncoder() {
             if (stringEncoder == null) {
-                stringEncoder = new StringEncoder(context, getState().asciiOnly());
+                stringEncoder = new StringEncoder(getRuntime(), getState().asciiOnly());
             }
             return stringEncoder;
         }

@@ -10,36 +10,27 @@ import org.jruby.RubyClass;
 import org.jruby.RubyHash;
 import org.jruby.RubyNumeric;
 import org.jruby.RubyString;
-import org.jruby.runtime.ThreadContext;
 import org.jruby.runtime.builtin.IRubyObject;
 import org.jruby.util.ByteList;
 
-import static json.ext.Generator.UTF8;
-
 final class OptionsReader {
-    private final ThreadContext context;
+
     private final Ruby runtime;
     private final RubyHash opts;
-    private RuntimeInfo info;
 
-    OptionsReader(ThreadContext context, IRubyObject vOpts) {
-        this.context = context;
-        this.runtime = context.getRuntime();
+    OptionsReader(Ruby runtime, IRubyObject vOpts) {
+        this.runtime = runtime;
         if (vOpts == null || vOpts.isNil()) {
             opts = null;
+        } else if (vOpts instanceof RubyHash) {
+            opts = (RubyHash) vOpts;
         } else if (vOpts.respondsTo("to_hash")) {
             opts = vOpts.convertToHash();
         } else if (vOpts.respondsTo("to_h")) {
-            opts = vOpts.callMethod(context, "to_h").convertToHash();
+            opts = vOpts.callMethod(runtime.getCurrentContext(), "to_h").convertToHash();
         } else {
             opts = vOpts.convertToHash(); /* Should just raise the correct TypeError */
         }
-    }
-
-    private RuntimeInfo getRuntimeInfo() {
-        if (info != null) return info;
-        info = RuntimeInfo.forRuntime(runtime);
-        return info;
     }
 
     /**

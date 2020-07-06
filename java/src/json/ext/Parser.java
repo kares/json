@@ -159,7 +159,7 @@ public class Parser extends RubyObject {
             throw runtime.newTypeError("already initialized instance");
          }
 
-        OptionsReader opts   = new OptionsReader(context, args.length > 1 ? args[1] : null);
+        OptionsReader opts   = new OptionsReader(runtime, args.length > 1 ? args[1] : null);
         this.maxNesting      = opts.getInt("max_nesting", DEFAULT_MAX_NESTING);
         this.allowNaN        = opts.getBool("allow_nan", false);
         this.symbolizeNames  = opts.getBool("symbolize_names", false);
@@ -284,7 +284,7 @@ public class Parser extends RubyObject {
             this.byteList = parser.checkAndGetSource().getByteList();
             this.data = byteList.unsafeBytes();
             this.view = new ByteList(data, false);
-            this.decoder = new StringDecoder(context);
+            this.decoder = new StringDecoder(context.runtime);
             this.dc = new DoubleConverter();
         }
 

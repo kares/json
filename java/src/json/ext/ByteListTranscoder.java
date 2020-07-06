@@ -5,8 +5,8 @@
  */
 package json.ext;
 
+import org.jruby.Ruby;
 import org.jruby.exceptions.RaiseException;
-import org.jruby.runtime.ThreadContext;
 import org.jruby.util.ByteList;
 
 /**
@@ -14,7 +14,7 @@ import org.jruby.util.ByteList;
  * using UTF-8 ByteLists as both input and output.
  */
 abstract class ByteListTranscoder {
-    protected final ThreadContext context;
+    protected final Ruby runtime;
 
     protected ByteList src;
     protected int srcEnd;
@@ -33,8 +33,8 @@ abstract class ByteListTranscoder {
      */
     private int quoteStart = -1;
 
-    protected ByteListTranscoder(ThreadContext context) {
-        this.context = context;
+    protected ByteListTranscoder(Ruby runtime) {
+        this.runtime = runtime;
     }
 
     protected void init(ByteList src, ByteList out) {

@@ -5,8 +5,8 @@
  */
 package json.ext;
 
+import org.jruby.Ruby;
 import org.jruby.exceptions.RaiseException;
-import org.jruby.runtime.ThreadContext;
 import org.jruby.util.ByteList;
 
 /**
@@ -24,8 +24,8 @@ final class StringDecoder extends ByteListTranscoder {
     // Array used for writing multi-byte characters into the buffer at once
     private final byte[] aux = new byte[4];
 
-    StringDecoder(ThreadContext context) {
-        super(context);
+    StringDecoder(Ruby runtime) {
+        super(runtime);
     }
 
     ByteList decode(ByteList src, int start, int end) {
@@ -124,8 +124,8 @@ final class StringDecoder extends ByteListTranscoder {
         }
     }
 
-    private byte tailByte(int value) {
-        return (byte)(0x80 | (value & 0x3f));
+    private static byte tailByte(int value) {
+        return (byte) (0x80 | (value & 0x3f));
     }
 
     /**
@@ -153,14 +153,14 @@ final class StringDecoder extends ByteListTranscoder {
         return result;
     }
 
+    private static final byte[] INVALID_UTF8_PREFIX = ByteList.plain("partial character in source, but hit end near ");
+
     @Override
     protected RaiseException invalidUtf8() {
-        ByteList message = new ByteList(
-                ByteList.plain("partial character in source, " +
-                               "but hit end near "));
+        ByteList message = new ByteList(80);
+        message.append(INVALID_UTF8_PREFIX);
         int start = surrogatePairStart != -1 ? surrogatePairStart : charStart;
         message.append(src, start, srcEnd - start);
-        return Utils.newException(context, Utils.M_PARSER_ERROR,
-                                  context.getRuntime().newString(message));
+        return Utils.newException(runtime.getCurrentContext(), Utils.M_PARSER_ERROR, runtime.newString(message));
     }
 }
