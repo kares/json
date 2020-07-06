@@ -309,7 +309,7 @@ public class Parser extends RubyObject {
         }
 
         private Ruby getRuntime() {
-            return context.getRuntime();
+            return context.runtime;
         }
 
         
@@ -922,15 +922,12 @@ case 5:
         }
 
         RubyInteger createInteger(int p, int new_p) {
-            Ruby runtime = getRuntime();
             ByteList num = absSubSequence(p, new_p);
-            return bytesToInum(runtime, num);
+            return str2inum(getRuntime(), num);
         }
 
-        RubyInteger bytesToInum(Ruby runtime, ByteList num) {
-            return runtime.is1_9() ?
-                    ConvertBytes.byteListToInum19(runtime, num, 10, true) :
-                    ConvertBytes.byteListToInum(runtime, num, 10, true);
+        private static RubyInteger str2inum(Ruby runtime, ByteList num) {
+            return ConvertBytes.byteListToInum19(runtime, num, 10, true);
         }
 
         
@@ -2331,9 +2328,9 @@ case 5:
          * @param start
          * @param end
          */
-        private ByteList absSubSequence(int absStart, int absEnd) {
-            view.setBegin(absStart);
-            view.setRealSize(absEnd - absStart);
+        private ByteList absSubSequence(int start, int end) {
+            view.setBegin(start);
+            view.setRealSize(end - start);
             return view;
         }
 
